@@ -1,0 +1,214 @@
+04/08/12
+A Guide to Writing WEB Inject
+
+The set_url command (not case sensitive) must be at the beginning of the line and contain 2 parameters in the specified order:
+The URL mask on which the Web Injector should fire and the set of flags that determine the trigger conditions and the behavior of the Web injection.
+Flags can be specified in any order without regard to the register. The delimiter between the set_url command and its parameters is a space.
+List of available flags:
+G - Web Injection fires when GET requests for the specified URL
+P - Web Injection triggered when POST request to the specified URL
+L - changes the behavior of the web-injection, the web page retrieves the data and is sent to the log
+Mask Symbols:
+* - any number of any characters, or any character
+# - one any number, or symbol #
+? - any one character
+The remaining characters of the mask are compared case-insensitive
+After the command set_url starts enumeration of the elements of the web-injection. It lasts until the new set_url command or until the end of the file.
+One web-injection consists of three kinds of elements in any order and quantity: data_before, data_inject, data_after.
+An element must begin with its name without regard to the case, must be at the beginning of the line and end with a line break.
+The element must end with a data_end command that is case-insensitive, which must be at the beginning of the line and end with a line break.
+The data between the beginning and the end of the element is the body of the element. The body of an element can be empty, can contain any characters.
+Assignment of bodies of elements:
+Data_before - a mask of data that is before the replaced or retrieved data
+Data_after - data mask after the data to be replaced or retrieved
+Data_inject - replacing data, or header of extracted data
+The data mask does not take into account the case of characters, ignores the single and double quotes, spaces and any kinds of line breaks.
+
+Example # 1. The simplest web-injection:
+Set_url http://ya.ru/ gp
+Data_before
+<Title>
+Data_end
+Data_inject
+New Title
+Data_end
+Data_after
+</ Title>
+Data_end
+Web-injection should work on the page http://ya.ru/ for GET and POST request.
+Replacement data New Title is inserted instead of data located between <title> and </ title>. Simply put, the page header is replaced.
+
+Example # 2. Any order and number of kinds of elements:
+SET_URL http://ya.ru/ PG
+DATA_BEFORE
+<Title>
+DATA_END
+DATA_AFTER
+</ Title>
+DATA_END
+Data_after
+</ Body>
+Data_end
+Data_before
+<Body
+Data_end
+DATA_INJECT
+New Title
+DATA_END
+Data_inject
+> New Body
+Data_end
+In a web injection with many identical kinds of elements, their groups are formed in the order of the queue.
+It is recommended not to mix the elements in this way for readability and to avoid the occurrence of errors in the order of the queue.
+The first found in the list data_before is grouped with the first found in the list data_after and first found in the list data_inject.
+The second found in the list data_before is grouped with the second found in the list data_after and the second found in the list data_inject. etc.
+
+Example # 3. Masks:
+Set_url * Ya.Ru * GP
+Data_before
+<T? T? E>
+Data_end
+Data_inject
+MASK
+Data_end
+Data_after
+</ *>
+Data_end
+Web-injection should work on pages in the names of which contains the text ya.ru (without register) with GET and POST request.
+The replacement MASK data is inserted instead of the data found between found by the masks <T? T? E> and </ *>. They fall under the tags <title> and </ title>.
+
+Example # 4. Data extraction:
+Set_url http://ya.ru/ GPL
+Data_before
+<Title>
+Data_end
+Data_inject
+Grabbed Title
+Data_end
+Data_after
+</ Title>
+Data_end
+Web-injection should work on the page http://ya.ru/ for GET and POST request.
+Data between <title> and </ title> is sent to the log and marked with the text Grabbed Title.
+
+
+
+
+
+MACROS
+
+Macros are used in data_inject
+% BOTUID% (case insensitive) - is replaced with a unique bot identifier
+% BOTDATA_varname% (case insensitive) - is replaced with the previously saved variable named varname
+
+The saving of variables occurs through the GET request to any address.
+If the query recognizes the command to store variables, then such a request to the server is not sent
+Example of a command to save a variable:% SAVEDATA_varname = 777% - the value of 777 is stored in the variable varname
+Sample query: http://microsoft.com/?blabla%SAVEDATA_var1=one%blabla%SAVEDATA_var2=two%blabla
+
+
+
+
+
+BEHAVIOR OF WEB-INJECTS IN COMBINING EMPTY AND FILLED BODIES OF ELEMENTS WITHOUT FLAG L AND WITH IT
+
+Option 1. All items are filled out:
+Set_url http://ya.ru/ G (L)
+Data_before
+<Title>
+Data_end
+Data_inject
+#1
+Data_end
+Data_after
+</ Title>
+Data_end
+Data_inject data replaces data between data_before and data_after
+(L) The data between data_before and data_after is sent to the log and marked as data_inject
+
+Option # 2. All items are empty:
+Set_url http://ya.ru/ G (L)
+Data_before
+Data_end
+Data_inject
+Data_end
+Data_after
+Data_end
+Data from beginning to end of page is deleted
+(L) Data from the beginning to the end of the page are sent to the log
+
+Option # 3. The data_before and data_after elements are empty, data_inject is full:
+Set_url http://ya.ru/ G (L)
+Data_before
+Data_end
+Data_inject
+# 3
+Data_end
+Data_after
+Data_end
+The data_inject is added to the top of the page
+(L) Data from the beginning to the end of the page is sent to the log and marked as data_inject
+
+Option # 4. The elements data_inject and data_after are empty, data_before is filled:
+Set_url http://ya.ru/ G (L)
+Data_before
+<Title>
+Data_end
+Data_inject
+Data_end
+Data_after
+Data_end
+Data after data_before is deleted
+(L) Data after data_before are sent to the log
+
+Option # 5. The data_before and data_inject elements are empty, data_after is full:
+Set_url http://ya.ru/ G (L)
+Data_before
+Data_end
+Data_inject
+Data_end
+Data_after
+</ Title>
+Data_end
+Data before data_after is deleted
+(L) Data before data_after is sent to the log
+
+Option # 6. The data_before and data_after elements are full, data_inject is empty:
+Set_url http://ya.ru/ G (L)
+Data_before
+<Title>
+Data_end
+Data_inject
+Data_end
+Data_after
+</ Title>
+Data_end
+Data between data_before and data_after is deleted
+(L) The data between data_before and data_after is sent to the log
+
+Option # 7. The elements data_inject and data_after are filled, data_before empty:
+Set_url http://ya.ru/ G (L)
+Data_before
+Data_end
+Data_inject
+# 7
+Data_end
+Data_after
+</ Title>
+Data_end
+Data_inject is added before data_after
+(L) Data before data_after is sent to the log and marked as data_inject
+
+
+Option # 8. The elements data_before and data_inject are filled, data_after is empty:
+Set_url http://ya.ru/ G (L)
+Data_before
+<Title>
+Data_end
+Data_inject
+#8
+Data_end
+Data_after
+Data_end
+Data_inject is added after data_before
+(L) Data after data_before is sent to the log and marked as data_inject
